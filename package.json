@@ -11,7 +11,9 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@mux/mux-node": "^12.8.1",
-    "@mux/mux-player-react": "^3.11.4",
+    "@mux/mux-player-react": "^3.11.5",
+    "@mux/mux-uploader": "^1.4.1",
+    "@mux/mux-uploader-react": "^1.4.1",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "class-variance-authority": "^0.7.1",

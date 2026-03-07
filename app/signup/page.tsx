@@ -20,41 +20,65 @@ export default function SignupPage() {
 
   const isFormValid = email.trim() !== '' && password.trim().length >= 6;
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid) return;
+const handleSignup = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!isFormValid) return;
 
-    setLoading(true);
+  setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
+  try {
+    // 1. Create the user account
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          username: email.split('@')[0].toLowerCase(), // basic default username
+          username: email.split('@')[0].toLowerCase(),
         },
-        emailRedirectTo: `${window.location.origin}/dashboard`, // optional: redirect after confirmation
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
 
-    if (error) {
-      toast.error('Signup failed', {
-        description: error.message || 'Please try again with a different email/password.',
+    if (signUpError) throw signUpError;
+    if (!signUpData.user) throw new Error('No user returned after signup');
+
+    // 2. Immediately sign in (auto-login)
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) throw signInError;
+
+    // 3. Create the profile row (now authenticated)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: signUpData.user.id,
+        username: email.split('@')[0].toLowerCase(),
+        classification: 'U', // default: Unclassified – user can edit later
       });
-    } else if (data.user) {
-      toast.success('Account created!', {
-        description: 'Check your email to verify your account, then log in.',
+
+    if (profileError) {
+      console.error('Profile insert failed:', profileError);
+      toast.error('Account created, but profile setup incomplete', {
+        description: 'You can update your profile later in settings.',
       });
-      router.push('/login');
     } else {
-      toast.info('Verification email sent', {
-        description: 'Please check your inbox (and spam) to complete signup.',
+      toast.success('Welcome to StageSync!', {
+        description: 'Account and profile created successfully.',
       });
-      router.push('/login');
     }
 
+    router.push('/dashboard');
+  } catch (error: any) {
+    toast.error('Signup failed', {
+      description: error.message || 'Please try again.',
+    });
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
