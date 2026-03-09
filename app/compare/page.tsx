@@ -13,17 +13,12 @@ import Navbar from '@/components/Navbar';
 
 type Video = {
   id: string;
-  mux_asset_id: string;
   playback_id: string | null;
   notes: string;
   trim_start: number;
-  trim_end: number;
-  duration: number;
-  status: string | null;
-  match_name: string | null;
+  stage_number: number | null;
   range_location: string | null;
   match_date: string | null;
-  stage_number: number | null;
   scoring_type: string | null;
   time: number | null;
   hit_factor: number | null;
@@ -49,22 +44,46 @@ export default function ComparePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
-      .from('videos')
-      .select('*');
+    console.log('=== COMPARE DEBUG START ===');
+    console.log('MY USER ID:', user.id);
 
-    console.log('RAW videos from DB:', data?.length || 0, data);
+    // Get accepted friends
+    const { data: friendData } = await supabase
+      .from('friend_requests')
+      .select('requester_id, requestee_id')
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${user.id},requestee_id.eq.${user.id}`);
 
-    const visible = (data || []).filter(v => 
-      v.user_id === user.id || v.visibility === 'public'
+    const friendIds = new Set(
+      friendData?.map(f => 
+        f.requester_id === user.id ? f.requestee_id : f.requester_id
+      ) || []
     );
+    console.log('MY FRIEND IDS:', Array.from(friendIds));
 
-    console.log('🔍 Visible videos for compare:', visible.length, visible.map(v => ({
-      id: v.id.slice(0,8),
-      match: v.match_name,
-      visibility: v.visibility,
-      owner: v.user_id === user.id ? 'MINE' : 'OTHER'
-    })));
+    // Get all videos
+    const { data: allVideos } = await supabase.from('videos').select('*');
+    console.log('RAW videos in DB:', allVideos?.length || 0);
+
+    // Filter
+    const visible = (allVideos || []).filter(v => {
+      const isMine = v.user_id === user.id;
+      const isPublic = v.visibility === 'public';
+      const isFriendVideo = v.visibility === 'friends' && friendIds.has(v.user_id);
+
+      console.log(`VIDEO CHECK — ${v.notes} (${v.id.slice(0,8)}):`, {
+        visibility: v.visibility,
+        uploader: v.user_id,
+        isMine,
+        isPublic,
+        isFriendVideo
+      });
+
+      return isMine || isPublic || isFriendVideo;
+    });
+
+    console.log('🔍 Visible videos (own + public + friends):', visible.length);
+    console.log('=== COMPARE DEBUG END ===');
 
     setVideos(visible);
   };
