@@ -9,7 +9,6 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import MuxPlayer from '@mux/mux-player-react';
-import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 
 type Video = {
@@ -29,6 +28,8 @@ type Video = {
   time: number | null;
   hit_factor: number | null;
   points_down: number | null;
+  visibility: 'private' | 'friends' | 'public';
+  user_id: string;
 };
 
 export default function ComparePage() {
@@ -47,14 +48,29 @@ export default function ComparePage() {
   const fetchVideos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase.from('videos').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    setVideos(data || []);
+
+    const { data } = await supabase
+      .from('videos')
+      .select('*');
+
+    console.log('RAW videos from DB:', data?.length || 0, data);
+
+    const visible = (data || []).filter(v => 
+      v.user_id === user.id || v.visibility === 'public'
+    );
+
+    console.log('🔍 Visible videos for compare:', visible.length, visible.map(v => ({
+      id: v.id.slice(0,8),
+      match: v.match_name,
+      visibility: v.visibility,
+      owner: v.user_id === user.id ? 'MINE' : 'OTHER'
+    })));
+
+    setVideos(visible);
   };
 
   useEffect(() => {
     fetchVideos();
-    const channel = supabase.channel('videos-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, fetchVideos).subscribe();
-    return () => supabase.removeChannel(channel);
   }, []);
 
   const filteredVideos = videos.filter(v =>
@@ -110,7 +126,6 @@ export default function ComparePage() {
           </CardHeader>
 
           <CardContent className="space-y-8">
-            {/* Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Match</Label>
@@ -139,7 +154,6 @@ export default function ComparePage() {
               </Button>
             </div>
 
-            {/* Video Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label>Left Player (A)</Label>
@@ -171,7 +185,6 @@ export default function ComparePage() {
 
             {selectedA?.playback_id && selectedB?.playback_id && (
               <div className="space-y-8">
-                {/* Players */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div>
@@ -204,7 +217,6 @@ export default function ComparePage() {
                   </div>
                 </div>
 
-                {/* Centered Controls */}
                 <div className="bg-muted/50 p-6 md:p-8 rounded-2xl flex flex-col items-center gap-6">
                   <div className="text-center">
                     <div className="text-lg font-semibold mb-1">Sync Offset</div>
@@ -217,7 +229,9 @@ export default function ComparePage() {
                     <Button onClick={togglePlayBoth} size="lg" className="flex-1 text-lg">
                       {isPlaying ? '⏸️ Pause Both' : '▶️ Play Both'}
                     </Button>
-                    <Button onClick={swapVideos} variant="outline" size="lg" className="flex-1">↔️ Swap A ↔ B</Button>
+                    <Button onClick={swapVideos} variant="outline" size="lg" className="flex-1">
+                      ↔️ Swap A ↔ B
+                    </Button>
                   </div>
                 </div>
               </div>

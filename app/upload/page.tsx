@@ -24,7 +24,8 @@ export default function UploadPage() {
   const [time, setTime] = useState('');
   const [hitFactor, setHitFactor] = useState('');
   const [pointsDown, setPointsDown] = useState('');
-  const [title, setTitle] = useState('');
+  const [videoName, setVideoName] = useState('');
+  const [visibility, setVisibility] = useState<'private' | 'friends' | 'public'>('private');
 
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [uploadId, setUploadId] = useState<string | null>(null);
@@ -53,9 +54,10 @@ export default function UploadPage() {
     toast.success('Upload finished — processing...');
   };
 
-  // Phase 1: asset_id
+  // Phase 1: Get asset_id after upload
   useEffect(() => {
     if (!uploadId || assetId) return;
+
     const interval = setInterval(async () => {
       const res = await fetch(`/api/mux-upload-status/${uploadId}`);
       const data = await res.json();
@@ -67,18 +69,20 @@ export default function UploadPage() {
             user_id: user.id,
             mux_asset_id: data.assetId,
             mux_upload_id: uploadId,
-            notes: title || 'Untitled stage',
+            notes: videoName || 'Untitled stage',
           });
         }
         clearInterval(interval);
       }
     }, 3000);
+
     return () => clearInterval(interval);
   }, [uploadId, assetId]);
 
-  // Phase 2: playbackId + duration
+  // Phase 2: Get playbackId + duration
   useEffect(() => {
     if (!assetId) return;
+
     const interval = setInterval(async () => {
       const res = await fetch(`/api/mux-asset/${assetId}`);
       const data = await res.json();
@@ -86,20 +90,22 @@ export default function UploadPage() {
         setPlaybackId(data.playbackId);
         setDuration(data.duration || 0);
         setTrimEnd(data.duration || 0);
-        await supabase.from('videos').update({ playback_id: data.playbackId, duration: data.duration, status: 'ready' }).eq('mux_asset_id', assetId);
+        await supabase.from('videos').update({
+          playback_id: data.playbackId,
+          duration: data.duration,
+          status: 'ready',
+        }).eq('mux_asset_id', assetId);
         clearInterval(interval);
-        toast.success('✅ Video ready — add match details & trim!');
+        toast.success('✅ Video ready — add details & trim!');
       }
     }, 3500);
+
     return () => clearInterval(interval);
   }, [assetId]);
 
   const saveTrim = async () => {
     if (!assetId) return;
-
-    const autoMatchName = rangeLocation && matchDate 
-      ? `${rangeLocation} - ${matchDate}` 
-      : 'Untitled Match';
+    const autoMatchName = rangeLocation && matchDate ? `${rangeLocation} - ${matchDate}` : 'Untitled Match';
 
     const { error } = await supabase
       .from('videos')
@@ -114,7 +120,8 @@ export default function UploadPage() {
         time: time ? parseFloat(time) : null,
         hit_factor: scoringType === 'USPSA' && hitFactor ? parseFloat(hitFactor) : null,
         points_down: scoringType === 'IDPA' && pointsDown ? parseInt(pointsDown) : null,
-        notes: title || 'Untitled stage',
+        notes: videoName || 'Untitled stage',
+        visibility,
       })
       .eq('mux_asset_id', assetId);
 
@@ -122,18 +129,18 @@ export default function UploadPage() {
   };
 
   const uploadAnother = () => {
-    // Keep range, date, scoring type for the next upload
+    // Keep persistent fields for the next video in the same match
     setUploadUrl(null);
     setUploadId(null);
     setAssetId(null);
     setPlaybackId(null);
     setTrimStart(0);
     setTrimEnd(0);
-    setTitle('');
     setStageNumber('');
     setTime('');
     setHitFactor('');
     setPointsDown('');
+    // Do NOT reset rangeLocation, matchDate, scoringType, or visibility
   };
 
   const trimmedLength = Math.max(0, trimEnd - trimStart);
@@ -177,7 +184,6 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {/* Conditional Scoring */}
             {scoringType && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/50 p-6 rounded-xl">
                 <div className="space-y-2">
@@ -200,11 +206,22 @@ export default function UploadPage() {
             )}
 
             <div className="space-y-2">
-              <Label>Extra Notes (optional)</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Felt fast on the draw" />
+              <Label>Video Name (shows in Compare dropdown)</Label>
+              <Input value={videoName} onChange={(e) => setVideoName(e.target.value)} placeholder="My run - felt fast on the draw" />
             </div>
 
-            {/* Upload + Trim */}
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <Select value={visibility} onValueChange={(v) => setVisibility(v as 'private' | 'friends' | 'public')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private (only me)</SelectItem>
+                  <SelectItem value="friends">Friends only</SelectItem>
+                  <SelectItem value="public">Public (anyone)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {!uploadUrl ? (
               <Button onClick={createUpload} className="w-full" size="lg">Prepare Upload</Button>
             ) : (
@@ -220,7 +237,7 @@ export default function UploadPage() {
                     <MuxPlayer playbackId={playbackId} streamType="on-demand" startTime={trimStart} style={{ aspectRatio: '16/9', width: '100%' }} />
                   </div>
                 ) : (
-                  <div className="aspect-video bg-muted rounded-xl flex items-center justify-center"><p>Mux is processing...</p></div>
+                  <div className="aspect-video bg-muted rounded-xl flex items-center justify-center"><p>Mux is processing... (30–90 seconds)</p></div>
                 )}
 
                 {duration > 0 && (
