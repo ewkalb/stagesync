@@ -26,12 +26,10 @@ export async function POST(req: NextRequest) {
 
     const upload = await mux.video.uploads.create({
       cors_origin: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-      playback_policy: 'public',  // ← Moved here (root level)
       new_asset_settings: {
-        // mp4_support removed earlier
-        // You can add other settings later if needed, e.g.:
-        // passthrough: 'my-custom-id',
-        // reduce_resolution: true,
+        playback_policies: ['public'],   // ← THIS IS THE FIX (plural + array + nested)
+        // Optional but nice for hat-cam footage:
+        // mp4_support: 'standard',      // for direct MP4 downloads later
       },
     });
 
