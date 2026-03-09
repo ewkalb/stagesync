@@ -12,8 +12,6 @@ import MuxUploader from '@mux/mux-uploader-react';
 import MuxPlayer from '@mux/mux-player-react';
 
 export default function UploadPage() {
-  console.log('🚀 UPLOAD PAGE vFINAL — onSuccess + two-phase polling');
-
   const [title, setTitle] = useState('');
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [uploadId, setUploadId] = useState<string | null>(null);
@@ -28,46 +26,39 @@ export default function UploadPage() {
       const { url, uploadId: id } = await res.json();
       setUploadUrl(url);
       setUploadId(id);
-      toast.info('Drop your hat-cam video');
+      toast.info('Drop your hat-cam video below');
     } catch (err) {
       toast.error('Failed to prepare upload');
     }
   };
 
-  const handleUploadSuccess = async (event: any) => {
-    console.log('🔥 onSuccess FIRED — upload complete to Mux');
-    if (!uploadId) {
-      toast.error('Missing upload ID');
-      return;
-    }
-    toast.success('Upload finished — waiting for Mux to create asset...');
+  const handleUploadSuccess = async () => {
+    if (!uploadId) return;
+    toast.success('Upload finished — Mux is creating asset...');
   };
 
-  // Phase 1: Poll for asset_id after upload success
+  // Phase 1: Poll for asset_id
   useEffect(() => {
     if (!uploadId || assetId) return;
 
     const interval = setInterval(async () => {
-      console.log('Phase 1: Checking upload status for', uploadId);
       const res = await fetch(`/api/mux-upload-status/${uploadId}`);
       const data = await res.json();
 
       if (data.assetId) {
-        console.log('✅ Got asset_id:', data.assetId);
         setAssetId(data.assetId);
 
-        // Save to DB
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase.from('videos').insert({
+          const { error } = await supabase.from('videos').insert({
             user_id: user.id,
             mux_asset_id: data.assetId,
             mux_upload_id: uploadId,
             notes: title || 'Untitled stage',
             classification: 'U',
           });
+          if (error) console.warn('DB insert warning:', error.message);
         }
-
         clearInterval(interval);
       }
     }, 3000);
@@ -75,20 +66,16 @@ export default function UploadPage() {
     return () => clearInterval(interval);
   }, [uploadId, assetId]);
 
-  // Phase 2: Poll for playbackId (exactly like before)
+  // Phase 2: Poll for playbackId + save metadata
   useEffect(() => {
     if (!assetId) return;
-
-    console.log('Phase 2: Polling for playbackId on asset', assetId);
 
     const interval = setInterval(async () => {
       const res = await fetch(`/api/mux-asset/${assetId}`);
       const data = await res.json();
 
       if (data.playbackId) {
-        console.log('🎉 Got playbackId:', data.playbackId);
-
-        await supabase
+        const { error } = await supabase
           .from('videos')
           .update({
             playback_id: data.playbackId,
@@ -97,30 +84,29 @@ export default function UploadPage() {
           })
           .eq('mux_asset_id', assetId);
 
+        if (error) console.warn('DB update warning:', error.message);
+
         setPlaybackId(data.playbackId);
         clearInterval(interval);
-        toast.success('✅ Video ready — preview playing below!');
+        toast.success('✅ Video ready for preview & trimming!');
       }
     }, 3500);
 
     return () => clearInterval(interval);
   }, [assetId]);
 
-  const debugForce = () => {
-    const id = prompt('Paste Mux asset ID for debug:');
-    if (id) setAssetId(id);
-  };
-
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <Card>
         <CardHeader>
           <CardTitle>Upload Stage Video</CardTitle>
-          <CardDescription>StageSync — USPSA Hat Cam Head-to-Head</CardDescription>
+          <CardDescription>
+            USPSA StageSync — Hat-cam POV for head-to-head comparison
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="space-y-2">
-            <Label htmlFor="title">Stage Notes (optional)</Label>
+            <Label htmlFor="title">Stage / Match Notes (optional)</Label>
             <Input
               id="title"
               value={title}
@@ -141,7 +127,7 @@ export default function UploadPage() {
 
           {assetId && (
             <div className="mt-8 space-y-3">
-              <h3 className="font-semibold">Processing Status</h3>
+              <h3 className="font-semibold">Live Preview</h3>
               {playbackId ? (
                 <div className="rounded-xl overflow-hidden border shadow-sm">
                   <MuxPlayer
@@ -160,9 +146,11 @@ export default function UploadPage() {
             </div>
           )}
 
-          <Button variant="outline" onClick={debugForce} className="w-full">
-            Debug: Force with asset ID
-          </Button>
+          {playbackId && (
+            <Button className="w-full" size="lg">
+              Set Trim Points &amp; Save (next step)
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>
