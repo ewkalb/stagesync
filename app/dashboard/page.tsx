@@ -7,22 +7,25 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogoutButton } from '@/components/LogoutButton';
 
+export const dynamic = 'force-dynamic'; // Skip prerender
+
 type Video = {
   id: string;
-  mux_playback_id: string;
+  mux_playback_id: string | null;
   title: string;
   match: string;
   stage: string;
   beep_offset_seconds: number;
-  // Other fields
+  // Add other fields
 };
 
 export default function Dashboard() {
   const [videos, setVideos] = useState<Video[]>([]);
   const router = useRouter();
-  const supabase = createBrowserClient();
 
   useEffect(() => {
+    const supabase = createBrowserClient();
+
     async function fetchData() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -30,31 +33,35 @@ export default function Dashboard() {
         return;
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('videos')
         .select('*')
         .eq('user_id', session.user.id);
 
+      if (error) {
+        console.error(error);
+        return;
+      }
       setVideos(data || []);
     }
     fetchData();
-  }, [router, supabase]);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <LogoutButton />
       </div>
       <Card className="bg-zinc-900 border-zinc-800">
         <CardHeader>
-          <CardTitle>Your Videos</CardTitle>
+          <CardTitle className="text-white">Your Videos</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Render videos list, e.g., <ul>{videos.map(v => <li key={v.id}>{v.title}</li>)}</ul> */}
+          {/* Render videos list */}
         </CardContent>
       </Card>
-      {/* Add friends or other sections */}
+      {/* Friends section, etc. */}
     </div>
   );
 }
