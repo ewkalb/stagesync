@@ -23,75 +23,67 @@ export default function Account() {
 
   const router = useRouter();
 
-  useEffect(() => {
-    const supabase = createBrowserClient();
-
-    async function fetchData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
-      if (profileError) {
-        toast.error('Failed to load profile: ' + profileError.message);
-        console.error('Profile fetch error:', profileError);
-        return;
-      }
-      setUsername(profile?.username || '');
-      setTempUsername(profile?.username || '');
-
-      // Incoming requests (pending)
-      const { data: incomingData, error: incomingError } = await supabase
-        .from('friend_requests')
-        .select('*')
-        .eq('requestee_id', session.user.id)
-        .eq('status', 'pending');
-
-      if (incomingError) {
-        toast.error('Failed to load incoming requests: ' + incomingError.message);
-        console.error('Incoming fetch error:', incomingError);
-      } else {
-        setIncomingRequests(incomingData || []);
-      }
-
-      // Outgoing requests (pending)
-      const { data: outgoingData, error: outgoingError } = await supabase
-        .from('friend_requests')
-        .select('*')
-        .eq('requester_id', session.user.id)
-        .eq('status', 'pending');
-
-      if (outgoingError) {
-        toast.error('Failed to load outgoing requests: ' + outgoingError.message);
-        console.error('Outgoing fetch error:', outgoingError);
-      } else {
-        setOutgoingRequests(outgoingData || []);
-      }
-
-      // Friends (accepted)
-      const { data: fromFriends, error: fromError } = await supabase
-        .from('friend_requests')
-        .select('*')
-        .eq('requester_id', session.user.id)
-        .eq('status', 'accepted');
-
-      const { data: toFriends, error: toError } = await supabase
-        .from('friend_requests')
-        .select('*')
-        .eq('requestee_id', session.user.id)
-        .eq('status', 'accepted');
-
-      if (fromError || toError) {
-        toast.error('Failed to load friends: ' + (fromError || toError)?.message);
-        console.error('Friends fetch error:', fromError || toError);
-      } else {
-        setFriends([...(fromFriends || []), ...(toFriends || [])]);
-      }
+// app/account/page.tsx useEffect
+useEffect(() => {
+  const supabase = createBrowserClient();
+  async function fetchData() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/login');
+      return;
     }
-    fetchData();
-  }, [router]);
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+    if (profileError) {
+      toast.error('Failed to load profile: ' + profileError.message);
+      console.error('Profile fetch error:', profileError);
+      return;
+    }
+    setUsername(profile?.username || '');
+    setTempUsername(profile?.username || '');
+    // Incoming requests (pending)
+    const { data: incomingData, error: incomingError } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .eq('requestee_id', session.user.id)
+      .eq('status', 'pending');
+    if (incomingError) {
+      toast.error('Failed to load incoming requests: ' + incomingError.message);
+      console.error('Incoming fetch error:', incomingError);
+    } else {
+      setIncomingRequests(incomingData || []);
+    }
+    // Outgoing requests (pending)
+    const { data: outgoingData, error: outgoingError } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .eq('requester_id', session.user.id)
+      .eq('status', 'pending');
+    if (outgoingError) {
+      toast.error('Failed to load outgoing requests: ' + outgoingError.message);
+      console.error('Outgoing fetch error:', outgoingError);
+    } else {
+      setOutgoingRequests(outgoingData || []);
+    }
+    // Friends (accepted)
+    const { data: fromFriends, error: fromError } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .eq('requester_id', session.user.id)
+      .eq('status', 'accepted');
+    const { data: toFriends, error: toError } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .eq('requestee_id', session.user.id)
+      .eq('status', 'accepted');
+    if (fromError || toError) {
+      toast.error('Failed to load friends: ' + (fromError || toError)?.message);
+      console.error('Friends fetch error:', fromError || toError);
+    } else {
+      setFriends([...(fromFriends || []), ...(toFriends || [])]);
+    }
+  }
+  fetchData();
+}, [router]);
 
   const saveUsername = async () => {
     const supabase = createBrowserClient();

@@ -44,58 +44,49 @@ export default function Compare() {
   const playerBRef = useRef<MuxPlayer>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    const supabase = createBrowserClient();
-
-    async function fetchVideos() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: fromFriends, error: fromError } = await supabase
-        .from('friend_requests')
-        .select('requestee_id')
-        .eq('requester_id', session.user.id)
-        .eq('status', 'accepted');
-
-      const { data: toFriends, error: toError } = await supabase
-        .from('friend_requests')
-        .select('requester_id')
-        .eq('requestee_id', session.user.id)
-        .eq('status', 'accepted');
-
-      if (fromError || toError) {
-        toast.error('Failed to load friends: ' + (fromError || toError)?.message);
-        console.error('Friends fetch error:', fromError || toError);
-        return;
-      }
-
-      const friendIds = new Set([
-        ...(fromFriends?.map(f => f.requestee_id) || []),
-        ...(toFriends?.map(f => f.requester_id) || []),
-      ]);
-
-      const { data: allVideos, error: videosError } = await supabase.from('videos').select('*');
-
-      if (videosError) {
-        toast.error('Failed to load videos: ' + videosError.message);
-        console.error('Videos fetch error:', videosError);
-        return;
-      }
-
-      const visible = (allVideos || []).filter(v => {
-        const isMine = v.user_id === session.user.id;
-        const isPublic = v.visibility === 'public';
-        const isFriendVideo = v.visibility === 'friends' && friendIds.has(v.user_id);
-        return isMine || isPublic || isFriendVideo;
-      });
-
-      setVideos(visible);
+useEffect(() => {
+  const supabase = createBrowserClient();
+  async function fetchVideos() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/login');
+      return;
     }
-    fetchVideos();
-  }, [router]);
+    const { data: fromFriends, error: fromError } = await supabase
+      .from('friend_requests')
+      .select('requestee_id')
+      .eq('requester_id', session.user.id)
+      .eq('status', 'accepted');
+    const { data: toFriends, error: toError } = await supabase
+      .from('friend_requests')
+      .select('requester_id')
+      .eq('requestee_id', session.user.id)
+      .eq('status', 'accepted');
+    if (fromError || toError) {
+      toast.error('Failed to load friends: ' + (fromError || toError)?.message);
+      console.error('Friends fetch error:', fromError || toError);
+      return;
+    }
+    const friendIds = new Set([
+      ...(fromFriends?.map(f => f.requestee_id) || []),
+      ...(toFriends?.map(f => f.requester_id) || []),
+    ]);
+    const { data: allVideos, error: videosError } = await supabase.from('videos').select('*');
+    if (videosError) {
+      toast.error('Failed to load videos: ' + videosError.message);
+      console.error('Videos fetch error:', videosError);
+      return;
+    }
+    const visible = (allVideos || []).filter(v => {
+      const isMine = v.user_id === session.user.id;
+      const isPublic = v.visibility === 'public';
+      const isFriendVideo = v.visibility === 'friends' && friendIds.has(v.user_id);
+      return isMine || isPublic || isFriendVideo;
+    });
+    setVideos(visible);
+  }
+  fetchVideos();
+}, [router]);
 
   useEffect(() => {
     if (selectedVideoA && selectedVideoB) {

@@ -18,17 +18,17 @@ export default function Signup() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    const supabase = createBrowserClient();
 
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.push('/dashboard');
-      }
+useEffect(() => {
+  const supabase = createBrowserClient();
+  async function checkSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      router.push('/dashboard');
     }
-    checkSession();
-  }, [router]);
+  }
+  checkSession();
+}, [router]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();

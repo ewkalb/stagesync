@@ -59,7 +59,6 @@ export default function Videos() {
         router.push('/login');
         return;
       }
-
       const { data, error } = await supabase.from('videos').select('*');
       if (error) {
         toast.error('Failed to load videos: ' + error.message);

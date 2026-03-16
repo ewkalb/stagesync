@@ -23,29 +23,26 @@ export default function Dashboard() {
   const [videos, setVideos] = useState<Video[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    const supabase = createBrowserClient();
-
-    async function fetchData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('videos')
-        .select('*')
-        .eq('user_id', session.user.id);
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-      setVideos(data || []);
+useEffect(() => {
+  const supabase = createBrowserClient();
+  async function fetchData() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/login');
+      return;
     }
-    fetchData();
-  }, [router]);
+    const { data, error } = await supabase
+      .from('videos')
+      .select('*')
+      .eq('user_id', session.user.id);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    setVideos(data || []);
+  }
+  fetchData();
+}, [router]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-6">

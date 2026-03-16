@@ -6,10 +6,10 @@ const mux = new Mux(process.env.MUX_TOKEN_ID, process.env.MUX_TOKEN_SECRET);
 
 export async function GET() {
   try {
-    const { data: upload } = await mux.Video.Uploads.create({
+    const { data: upload } = await mux.video.uploads.create({
       cors_origin: '*',
       new_asset_settings: {
-        playback_policy: 'public',
+        playback_policies: 'public',
       },
     });
 

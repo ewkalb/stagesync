@@ -31,27 +31,25 @@ export default function Upload() {
 
   const router = useRouter();
 
-  useEffect(() => {
-    const supabase = createBrowserClient();
-
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) router.push('/login');
+useEffect(() => {
+  const supabase = createBrowserClient();
+  async function checkSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) router.push('/login');
+  }
+  checkSession();
+  async function fetchUploadUrl() {
+    const res = await fetch('/api/mux-upload', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      toast.error('Failed to get upload URL: ' + (err.error || 'Unknown'));
+      return;
     }
-    checkSession();
-
-    async function fetchUploadUrl() {
-      const res = await fetch('/api/mux-upload', { method: 'POST' });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error('Failed to get upload URL: ' + (err.error || 'Unknown'));
-        return;
-      }
-      const { url } = await res.json();
-      setUploadUrl(url);
-    }
-    fetchUploadUrl();
-  }, [router]);
+    const { url } = await res.json();
+    setUploadUrl(url);
+  }
+  fetchUploadUrl();
+}, [router]);
 
   const handleUploadSuccess = (evt: CustomEvent) => {
     const detail = evt.detail;
