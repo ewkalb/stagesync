@@ -1,6 +1,5 @@
 // app/videos/page.tsx
 'use client';
-export const dynamic = 'force-dynamic'; // Skip prerender
 
 import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -10,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MuxPlayer from '@mux/mux-player-react';
 import { toast } from 'sonner';
+
+export const dynamic = 'force-dynamic'; // Skip prerender
 
 type Video = {
   id: string;
@@ -99,7 +100,7 @@ export default function Videos() {
                     {v.playback_id && (
                       <MuxPlayer
                         playbackId={v.playback_id}
-                        startTime={v.trim_start || 0}
+                        startTime={Number(v.trim_start) || 0} // Ensure number
                         muted
                         className="w-full h-full"
                       />
@@ -115,10 +116,10 @@ export default function Videos() {
                     <Badge variant="secondary" className="bg-zinc-800 text-zinc-300">
                       {v.visibility}
                     </Badge>
-                    <Button 
-                      onClick={() => deleteVideo(v.id)} 
-                      variant="destructive" 
-                      size="sm" 
+                    <Button
+                      onClick={() => deleteVideo(v.id)}
+                      variant="destructive"
+                      size="sm"
                       className="w-full bg-red-900 hover:bg-red-800"
                     >
                       Delete Video
