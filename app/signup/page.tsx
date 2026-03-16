@@ -1,5 +1,6 @@
 // app/signup/page.tsx
 'use client';
+export const dynamic = 'force-dynamic'; // Skip prerender
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
