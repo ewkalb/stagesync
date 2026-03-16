@@ -3,114 +3,58 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { login } from '@/app/actions/auth'; // New server action
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+export default function Login() {
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClient();
 
-  const isFormValid = email.trim() !== '' && password.trim() !== '';
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid) return;
-
-    setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      toast.error('Login failed', {
-        description: error.message || 'Invalid email or password',
-      });
+  const handleLogin = async (formData: FormData) => {
+    setError(null);
+    const result = await login(formData);
+    if (result?.error) {
+      setError(result.error);
     } else {
-      toast.success('Logged in successfully');
-      router.push('/dashboard');
+      router.push('/dashboard'); // Fallback, but server redirect handles it
     }
-
-    setLoading(false);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Login to StageSync</CardTitle>
-          <CardDescription>
-            Enter your credentials to access and compare your stage videos
-          </CardDescription>
+    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6">
+      <Card className="bg-zinc-900 border-zinc-800 w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Log In to StageSync</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
+        <CardContent>
+          <form action={handleLogin} className="space-y-4"> {/* Server action */}
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email" // For formData
                 type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="email"
-                autoFocus
               />
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <a
-                  href="/forgot-password"
-                  className="text-sm text-primary hover:underline"
-                >
-                  Forgot password?
-                </a>
-              </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password" // For formData
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete="current-password"
               />
             </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading || !isFormValid}
-              aria-disabled={loading || !isFormValid}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Logging in...
-                </>
-              ) : (
-                'Login'
-              )}
-            </Button>
+            {error && <p className="text-red-500">{error}</p>}
+            <Button type="submit" className="w-full">Log In</Button>
           </form>
-
-          <div className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
-            <a href="/signup" className="text-primary hover:underline font-medium">
-              Sign up
-            </a>
-          </div>
+          <p className="mt-4 text-center text-zinc-400">
+            No account? <a href="/signup" className="text-white hover:underline">Sign up</a>
+          </p>
         </CardContent>
       </Card>
     </div>

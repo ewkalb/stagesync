@@ -1,10 +1,19 @@
 // lib/supabase/client.ts
-// ONLY for 'use client' components (login, signup, etc.)
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+
+export const createBrowserClient = () => {
+  if (typeof window === 'undefined') {
+    throw new Error('createBrowserClient should only be called on the client-side');
+  }
+
+  if (!supabaseClient) {
+    supabaseClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
+
+  return supabaseClient;
+};

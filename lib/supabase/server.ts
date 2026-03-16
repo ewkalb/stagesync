@@ -1,29 +1,22 @@
 // lib/supabase/server.ts
-// ONLY for Server Components, Middleware, Route Handlers, Server Actions
-import { createServerClient } from '@supabase/ssr';
+import { createClient as supabaseCreateClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
-export async function createServerClientSsr() {
-  const cookieStore = await cookies();  // Await the Promise here
+export const createClient = async () => {
+  const cookieStore = await cookies();
 
-  return createServerClient(
+  return supabaseCreateClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
+      auth: {
+        storage: {
+          getItem: (key) => cookieStore.get(key)?.value,
+          setItem: (key, value) => cookieStore.set(key, value),
+          removeItem: (key) => cookieStore.delete(key),
         },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch {
-            // Ignore sets from Server Components (no write access there)
-          }
-        },
+        flowType: 'pkce',
       },
     }
   );
-}
+};
