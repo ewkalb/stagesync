@@ -8,16 +8,14 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   const path = request.nextUrl.pathname;
+  console.log('Middleware for path: ' + path + ', session: ' + (session ? 'yes' : 'no'));
 
   const protectedPaths = ['/dashboard', '/upload', '/videos', '/compare', '/account'];
-  const authPaths = ['/login', '/signup'];
-
-  // Redirect unauth from protected to login
-  if (!session && protectedPaths.includes(path)) {
+  if (!session && protectedPaths.some(p => path.startsWith(p))) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect auth from auth paths to dashboard
+  const authPaths = ['/login', '/signup'];
   if (session && authPaths.includes(path)) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
@@ -27,11 +25,11 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dashboard',
-    '/upload',
-    '/videos',
-    '/compare',
-    '/account',
+    '/dashboard/:path*',
+    '/upload/:path*',
+    '/videos/:path*',
+    '/compare/:path*',
+    '/account/:path*',
     '/login',
     '/signup',
   ],

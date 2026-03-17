@@ -59,6 +59,7 @@ export default function Videos() {
         router.push('/login');
         return;
       }
+
       const { data, error } = await supabase.from('videos').select('*');
       if (error) {
         toast.error('Failed to load videos: ' + error.message);
@@ -102,6 +103,7 @@ export default function Videos() {
                         startTime={Number(v.trim_start) || 0} // Ensure number
                         muted
                         className="w-full h-full"
+                        streamType="on-demand" // Add for static videos
                       />
                     )}
                   </div>
